@@ -139,8 +139,7 @@ system_prompt = f"""
             """
 if __name__ == "__main__":
     # geting the images from the folder
-    directory_path = "/home/zumbie/Downloads/HENTAI/[GREAT芥 (tokyo)] ホルンの魔女つかまえた (メロンブックス デジタルver) (アークザラッド)"
-    # directory_path ="/home/zumbie/Downloads/[Tamaya Gekijou (Tamaya Cinema)] Zetsurin Oji-san to Osananajimi no Musume no, Sukebe na Suujitsukan Day 2 [Chinese]"
+    directory_path = "../manga"
     
     FONT_PATH = r"../fonts/CC Wild Words Roman.ttf"
 

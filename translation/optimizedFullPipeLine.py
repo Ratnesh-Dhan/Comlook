@@ -6,6 +6,8 @@ import cv2
 import os, numpy as np
 from matplotlib import pyplot as plt
 from torchvision.utils import save_image
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 from manga_ocr import MangaOcr
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
@@ -34,6 +36,37 @@ def wrap_text_pixel(draw, text, font, max_width):
         lines.append(current)
 
     return lines
+def put_all_eng_text(image, panel_boxes):
+    for i in panel_boxes:
+        x1, y1, x2, y2, _ = i
+        cv2.rectangle(image, (x1+5, y1+5), (x2-5, y2-5), (255,255,255), -1)
+    pil_image = Image.fromarray(image)
+    draw = ImageDraw.Draw(pil_image)
+    for i in panel_boxes:
+        x1, y1, x2, y2, text = i
+        bubble_width = (x2-x1) -20
+        bubble_height = (y2-y1) - 20
+        # font_size = min((y2 - y1)//3, 28)  # better starting size
+        font_size = 35
+        while font_size > 10:
+            font = ImageFont.truetype(FONT_PATH, font_size)
+            lines = wrap_text_pixel(draw, text, font, bubble_width)
+            line_height = draw.textbbox((0, 0), 'Ay', font=font)[3]
+            total_height = line_height * len(lines)
+            if total_height <= bubble_height:
+                break
+            font_size = font_size - 2
+        y_text = y1 + ((bubble_height - total_height) // 2)
+        for line in lines:
+            bbox = draw.textbbox((0,0),line,font=font)
+            line_width = bbox[2] - bbox[0]
+            if x1 < 5:
+                x_text = 10 + ((bubble_width - line_width) // 2)
+            else:
+                x_text = x1 + ((bubble_width - line_width) // 2)
+            draw.text((x_text, y_text), line, fill=(0,0,0), font=font)
+            y_text += line_height
+    return np.array(pil_image)
 
 def put_eng_text(image, x1, y1, x2, y2, text):
     cv2.rectangle(image, (x1,y1),(x2,y2), (255,255,255), -1)
@@ -76,6 +109,7 @@ system_prompt = f"""
 
             Rules:
             - Output ONLY the English translations.
+            - Understand the context by the all the texts and translate like real conversation.
             - Change any japanese text to its proper english meaning, only if it is not a noun.
             - Do NOT explain anything.
             - Do NOT add notes.
@@ -87,9 +121,8 @@ system_prompt = f"""
             """
 if __name__ == "__main__":
     # geting the images from the folder
-    directory_path = "/home/zumbie/Downloads/HENTAI/[GREAT芥 (tokyo)] ホルンの魔女つかまえた (メロンブックス デジタルver) (アークザラッド)"
-    # directory_path ="/home/zumbie/Downloads/[Tamaya Gekijou (Tamaya Cinema)] Zetsurin Oji-san to Osananajimi no Musume no, Sukebe na Suujitsukan Day 2 [Chinese]"
-    
+    directory_path = "../manga"
+
     FONT_PATH = r"../fonts/CC Wild Words Roman.ttf"
 
     client =ollama.Client(host="http://127.0.0.1:11434")
@@ -165,21 +198,20 @@ if __name__ == "__main__":
         lines = response['message']['content'].strip().split("\n")
         translations = {}
         for line in lines:
-            print(line)
+            if len(line.split(":", 1)) == 1:
+                continue
             idx, txt = line.split(":", 1)
             translations[int(idx)] = txt
+        print(translations)
+        panel_boxes = []
         for i, box in enumerate(box_ary):
-            translated_text = translations.get(i, "")
-            if not translated_text:
-                continue
-            x1, y1, x2, y2 = box["x1"], box["y1"], box["x2"], box["y2"]
-            img_rgb = put_eng_text(img_rgb, x1=x1, y1=y1, x2=x2, y2=y2, text=translated_text)
+            panel_boxes.append([box['x1'], box['y1'], box['x2'], box['y2'], translations.get(i, "")])
+        img_rgb = put_all_eng_text(img_rgb, panel_boxes)
 
         pillow_image = Image.fromarray(img_rgb)
         pillow_image.save(os.path.join(save_images_path,f"{i}.png"))
         translated_images.append(os.path.join(save_images_path,f"{i}.png"))
         print("Page :", i+1, " Completed")
-    print(translated_images)
     with open(os.path.join(directory_path, "translated_images.pdf"), "wb") as f: 
         f.write(img2pdf.convert(translated_images))
     f.close()
