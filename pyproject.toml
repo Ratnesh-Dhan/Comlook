@@ -1,0 +1,17 @@
+[project]
+name = "comlook"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "img2pdf>=0.6.3",
+    "manga-ocr>=0.1.14",
+    "matplotlib>=3.10.8",
+    "ollama>=0.6.1",
+    "opencv-python>=4.13.0.92",
+    "pillow>=12.1.1",
+    "torch>=2.10.0",
+    "torchvision>=0.25.0",
+    "tqdm>=4.67.3",
+]

@@ -1,0 +1,5 @@
+pip3 install paddleocr
+# this shit is OCR for text extraction from manga txt blobs 
+# with the help of our detection model.
+
+

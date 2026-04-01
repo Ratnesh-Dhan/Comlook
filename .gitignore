@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+fonts/
+model/
+*.egg-info
+
+# Virtual environments
+.venv
+*.pth
+*.pdf
+*.png
+*.webp
+*.jpg
+*.tff
