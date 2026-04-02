@@ -4,8 +4,6 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import torchvision.transforms as T
 import cv2
 import os, numpy as np
-from matplotlib import pyplot as plt
-from torchvision.utils import save_image
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 from manga_ocr import MangaOcr
@@ -20,86 +18,103 @@ def wrap_text_pixel(draw, text, font, max_width):
     words = text.split()
     lines = []
     current = ""
-
     for word in words:
-        test = current + " " + word if current else word
-        bbox = draw.textbbox((0, 0), test, font=font)
-        width = bbox[2] - bbox[0]
+        bbox = draw.textbbox((0, 0), word, font=font)
+        word_width = bbox[2] - bbox[0] # Correct width calculation
+        
+        if word_width > max_width:
+            if current: lines.append(current)
+            # lines.append(word)
+            # current = ""
+            # continue
+            #------CHOPPING THE WORD INTO SMALLER PIECES------
+            temp_word = word
+            while True:
+                split_idx = 0
+                for i in range(1, len(temp_word)):
+                    test_part = temp_word[:i] + "-"
+                    part_w = draw.textbbox((0,0), test_part, font=font)[2] - draw.textbbox((0,0), test_part, font=font)[0]
+                    if part_w > max_width:
+                        break
+                    split_idx = i
+                 # If we can't even fit one char + '-', just force split at 1 char
+                split_idx = max(1, split_idx)
+                
+                # Add the chopped part to lines
+                lines.append(temp_word[:split_idx] + "-")
+                temp_word = temp_word[split_idx:]
+                
+                # Check remaining part
+                rem_w = draw.textbbox((0, 0), temp_word, font=font)[2] - draw.textbbox((0, 0), temp_word, font=font)[0]
+                if rem_w <= max_width:
+                    current = temp_word # Remaining bit becomes the start of the next line
+                    break
+            continue
+            #------CHOPPING THE WORD INTO SMALLER PIECES------
 
-        if width <= max_width:
+        test = current + " " + word if current else word
+        test_bbox = draw.textbbox((0, 0), test, font=font)
+        test_width = test_bbox[2] - test_bbox[0] # Correct width calculation
+        
+        if test_width <= max_width:
             current = test
         else:
             lines.append(current)
             current = word
-
-    if current:
-        lines.append(current)
-
+            
+    if current: lines.append(current)
     return lines
+
 def put_all_eng_text(image, panel_boxes):
-    for i in panel_boxes:
-        x1, y1, x2, y2, _ = i
-        cv2.rectangle(image, (x1+5, y1+5), (x2-5, y2-5), (255,255,255), -1)
-    pil_image = Image.fromarray(image)
-    draw = ImageDraw.Draw(pil_image)
-    for i in panel_boxes:
-        x1, y1, x2, y2, text = i
-        bubble_width = (x2-x1) -20
-        bubble_height = (y2-y1) - 20
-        # font_size = min((y2 - y1)//3, 28)  # better starting size
-        font_size = 35
-        while font_size > 10:
-            font = ImageFont.truetype(FONT_PATH, font_size)
-            lines = wrap_text_pixel(draw, text, font, bubble_width)
-            line_height = draw.textbbox((0, 0), 'Ay', font=font)[3]
-            total_height = line_height * len(lines)
-            if total_height <= bubble_height:
-                break
-            font_size = font_size - 2
-        y_text = y1 + ((bubble_height - total_height) // 2)
-        for line in lines:
-            bbox = draw.textbbox((0,0),line,font=font)
-            line_width = bbox[2] - bbox[0]
-            if x1 < 5:
-                x_text = 10 + ((bubble_width - line_width) // 2)
+    # Quick NumPy white-out
+    for x1, y1, x2, y2, _ in panel_boxes:
+        image[y1:y2, x1:x2] = 255 
+        
+    pil_img = Image.fromarray(image)
+    draw = ImageDraw.Draw(pil_img)
+
+    for x1, y1, x2, y2, text in panel_boxes:
+        # Use a slightly larger padding (e.g., 15) to ensure text doesn't touch edges
+        padding = 15
+        w, h = (x2 - x1) - padding, (y2 - y1) - padding
+        
+        low, high = 8, 24
+        final_font, final_lines, final_total_h = None, [], 0
+        
+        while low <= high:
+            mid = (low + high) // 2
+            f = ImageFont.truetype(FONT_PATH, mid)
+            lines = wrap_text_pixel(draw, text, f, w)
+            
+            line_metrics = draw.textbbox((0, 0), "Ay", font=f)
+            line_h = (line_metrics[3] - line_metrics[1])*1.2
+            total_h = line_h * len(lines)
+            
+            if total_h <= h:
+                final_font, final_lines, final_total_h = f, lines, total_h
+                low = mid + 1
             else:
-                x_text = x1 + ((bubble_width - line_width) // 2)
-            draw.text((x_text, y_text), line, fill=(0,0,0), font=font)
-            y_text += line_height
-    return np.array(pil_image)
+                high = mid - 1
+        
+        if final_font:
+            line_metrics = draw.textbbox((0, 0), "Ay", font=final_font)
+            line_h = line_metrics[3] - line_metrics[1]
+            
+            # Start Y: Center the block vertically
+            start_y = y1 + ( (y2 - y1) - final_total_h ) // 2
+            
+            for line in final_lines:
+                l_bbox = draw.textbbox((0, 0), line, font=final_font)
+                l_w = l_bbox[2] - l_bbox[0] # Correct width
+                
+                # Start X: Center this specific line horizontally
+                start_x = x1 + ( (x2 - x1) - l_w ) // 2
+                
+                draw.text((start_x, start_y), line, fill=0, font=final_font)
+                start_y += line_h
 
-def put_eng_text(image, x1, y1, x2, y2, text):
-    cv2.rectangle(image, (x1,y1),(x2,y2), (255,255,255), -1)
-    pil_image = Image.fromarray(image)
-    draw = ImageDraw.Draw(pil_image)
-    # font = ImageFont.load_default()
-    bubble_width = (x2-x1) -20
-    bubble_height = (y2-y1) - 20
+    return np.array(pil_img)
 
-    font_size = 35
-
-    while font_size > 10:
-        font = ImageFont.truetype(FONT_PATH, font_size)
-        lines = wrap_text_pixel(draw, text, font, bubble_width)
-        line_height = draw.textbbox((0,0), 'Ay', font=font)[3]
-        total_height = line_height * len(lines)
-        if total_height <= bubble_height:
-            break
-        font_size = font_size - 2
-    
-    y_text = y1 + ((bubble_height - total_height) // 2)
-
-    for line in lines:
-        bbox = draw.textbbox((0,0),line,font=font)
-        line_width = bbox[2] - bbox[0]
-        if x1 < 5:
-            x_text = 10 + ((bubble_width - line_width) // 2)
-        else:
-            x_text = x1 + ((bubble_width - line_width) // 2)
-        draw.text((x_text, y_text), line, fill=(0,0,0), font=font)
-        y_text += line_height
-
-    return np.array(pil_image)
 
 system_prompt = f"""
             You are a adult manga dialogue translator.
