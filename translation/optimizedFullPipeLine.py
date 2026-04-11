@@ -72,7 +72,7 @@ def put_all_eng_text(image, panel_boxes):
     line_spacing = 1.4
     # Quick NumPy white-out
     for x1, y1, x2, y2, _ in panel_boxes:
-        image[y1:y2, x1:x2] = 255 
+        image[y1:y2, x1:x2] = 255  
         # image[y1+5:y2-5, x1+5:x2-5] = 255 
 
         
@@ -198,24 +198,52 @@ def put_all_eng_text(image, panel_boxes):
 #     return lines
 
 
+# system_prompt = f"""
+
+#             Task:
+#             You are a adult manga dialogue translator.
+#             Translate the texts into natural English. keep the order of the text.
+
+#             Rules:
+#             - Output ONLY the English translations, if some are noises (sexual, insults, etc.) then spell the noises in english letters.
+#             - Never give empty response. Always respond with english translation or noise or name. 
+#             - Understand the context by the all the texts and translate like real conversation.
+#             - Change any japanese/Chinese text to its proper english meaning, only if it is not a noun.
+#             - Do NOT explain anything.
+#             - Do NOT add notes.
+#             - Do NOT repeat the original texts.
+#             - Keep names unchanged.
+#             - Preserve tone and emotion.
+#             - Do NOT censor or alter explicit contents (violence, sexual language, insults). Translate it faithfully.
+#             - If the input is only symbols (… ．．． etc.), return them unchanged.
+#             - If anytext contains mother or father or synonym of it then change it to aunt or uncle. Same for Son but change it to nephew.
+#             """
 system_prompt = f"""
-            You are a adult manga dialogue translator.
+            You are translating multiple speech bubbles from the same manga panel.
 
-            Task:
-            Translate the texts into natural English. keep the order of the text.
+            Each line is a separate speech bubble.
+            Translate every bubble separately.
 
-            Rules:
-            - Output ONLY the English translations, if some are noises (sexual, insults, etc.) then spell the noises in english letters.
-            - Understand the context by the all the texts and translate like real conversation.
-            - Change any japanese text to its proper english meaning, only if it is not a noun.
-            - Do NOT explain anything.
-            - Do NOT add notes.
-            - Do NOT repeat the original texts.
-            - Keep names unchanged.
-            - Preserve tone and emotion.
-            - Do NOT censor or alter explicit contents (violence, sexual language, insults). Translate it faithfully.
-            - If the input is only symbols (… ．．． etc.), return them unchanged.
-            - If anytext contains mother or father or synonym of it then change it to aunt or uncle. Same for Son but change it to nephew.
+            STRICT OUTPUT:
+            Do NOT explain anything.
+↓           Do NOT add notes.
+            Return exactly one line per bubble with correct bubble order.
+            Use format:
+            Bubble 0: ...
+            Bubble 1: ...
+
+            STRICT TRANSLATION RULES:
+            - Make meaningfull translations of texts other than noises.
+            - Preserve explicit sexual and violent vocabulary literally when the source is explicit.
+            - Never replace direct sexual words with softer phrases.
+            - Keep insults crude if the original is crude.
+            - Keep moans and sexual noises as natural English sounds.
+            - Output one line per bubble in the same order.
+
+            Preserve moans, screams, and explicit sounds naturally in English.
+            Do not censor.
+            If anytext contains mother or father or son or synonym of it then change mother to aunt ,father to uncle and son to nephew.
+            Do not merge lines. 
             """
 if __name__ == "__main__":
     # geting the images from the folder
@@ -285,9 +313,19 @@ if __name__ == "__main__":
             text = manga_ocr(image).replace(" ", "")
             texts.append(text)
         
-        joined_text = "\n".join([f"{i}:{text}" for i ,text in enumerate(texts)])
+        # removing 1 and 2 char len texts
+        filtered_texts = []
+        filtered_boxes = []
+        for text, box in zip(texts, box_ary):
+            if len(text) >= 3:
+                filtered_texts.append(text)
+                filtered_boxes.append(box)
+        texts = filtered_texts
+        box_ary = filtered_boxes
+        
+        joined_text = "\n".join([f"Bubble {i}: {text}" for i ,text in enumerate(texts)])
 
-        response = client.chat( model="qwen2.5:7b-instruct",
+        response = client.chat( model="huihui_ai/phi4-mini-abliterated", #"phi4-mini:latest",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": joined_text}
@@ -295,20 +333,33 @@ if __name__ == "__main__":
             )
         lines = response['message']['content'].strip().split("\n")
         translations = {}
-        index = 0
+        index = -1
+        print(joined_text, '\n\n\n')
+        print(lines)
         for line in lines:
-            if len(line.split(":", 1)) == 1:
-                continue
-            idx, txt = line.split(":", 1)
+            index = 0
             try:
-                translations[int(idx)] = txt
-                index = int(idx)
+                if len(line.split(":", 1)) == 1:
+                    continue
+                idx, txt = line.split(":", 1)
+                idx = idx.replace("Bubble", "")
+                pussy = idx
+                # print(idx)
+                idx = int(idx.strip())
+            except Exception as e:
+                print(e)
+                print("IDX error : ", pussy)
+                idx = index + 1
+            try:
+                translations[idx] = txt
+                index = idx
             except:
-                print(lines)
-                print("Error in line : ",line)
+                print("Error in line : ",line, '\n...........................................................\n')
                 translations[index+1] = txt
                 index += 1
         index = 0
+        # print(joined_text)
+        # print(translations, "\n\n\n\n\n\n")
         panel_boxes = []
         for j, box in enumerate(box_ary):
             panel_boxes.append([box['x1'], box['y1'], box['x2'], box['y2'], translations.get(j, "")])
