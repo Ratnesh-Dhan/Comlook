@@ -3,6 +3,7 @@ import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import torchvision.transforms as T
 import cv2
+import re
 import os, numpy as np
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
@@ -291,6 +292,13 @@ system_prompt = f"""
             #     Bubble 0: ...
             #     Bubble 1: ...
 def incestkiller(txt):
+    txt = re.sub(r"\bmother\b", "ane sama", txt, flags=re.IGNORECASE)
+    txt = re.sub(r"\bmom\b", "ane sama", txt, flags=re.IGNORECASE)
+    txt = re.sub(r"\bmomma\b", "ane sama", txt, flags=re.IGNORECASE)
+    txt = re.sub(r"\bfather\b", "ojisan", txt, flags=re.IGNORECASE)
+    txt = re.sub(r"\bdad\b", "ojisan", txt, flags=re.IGNORECASE)
+    txt = re.sub(r"\bson\b", "boya", txt, flags=re.IGNORECASE)
+    return txt
     if " mother " in txt.lower():
         txt = txt.replace(" mother ", " ane sama ")
     if  " mom " in txt.lower():
