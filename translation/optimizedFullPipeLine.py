@@ -13,9 +13,13 @@ import ollama
 import img2pdf
 from tqdm import tqdm
 import shutil
+from datetime import datetime
 
-# directory_path = "/home/zumbie/Downloads/HENTAI/[黒ごま製造工場 (ごまゴリラ)] 尻穴便女 李 Extra [捣蛋鬼个人汉化]"
-directory_path = "/home/zumbie/Downloads/HENTAI/testfuck"
+# directory_path = "/home/zumbie/Downloads/HENTAI/(成年コミック) [ジョン・K・ペー太] マン・コンプリート [DL版]"
+# directory_path = "/home/zumbie/Downloads/HENTAI/(C106) [STUDIO VANGUARD (TWILIGHT)] V250817 [Chinese]"
+directory_path = r"/home/zumbie/Downloads/HENTAI/僕がお母さんとこんな事になっちゃう話 10 温泉編"
+# directory_path = "/home/zumbie/Downloads/HENTAI/testfuck"
+
 
 def wrap_text_pixel(draw, text, font, max_width):
     words = text.split()
@@ -218,33 +222,89 @@ def put_all_eng_text(image, panel_boxes):
 #             - If the input is only symbols (… ．．． etc.), return them unchanged.
 #             - If anytext contains mother or father or synonym of it then change it to aunt or uncle. Same for Son but change it to nephew.
 #             """
+# system_prompt = f"""
+#             You are translating multiple speech bubbles from the same manga panel.
+
+#             Each line is a separate speech bubble.
+#             Translate every bubble separately.
+
+#             STRICT OUTPUT:
+#             Do NOT explain anything.
+# ↓           Do NOT add notes.
+#             Return exactly one line per bubble with correct bubble order.
+#             Use format:
+#             Bubble 0: ...
+#             Bubble 1: ...
+
+#             STRICT TRANSLATION RULES:
+#             - Make meaningfull translations of texts other than noises.
+#             - Preserve explicit sexual and violent vocabulary literally when the source is explicit.
+#             - Never replace direct sexual words with softer phrases.
+#             - Keep insults crude if the original is crude.
+#             - Keep moans and sexual noises as natural English sounds.
+#             - Output one line per bubble in the same order.
+
+#             Preserve moans, screams, and explicit sounds naturally in English.
+#             Do not censor.
+#             If anytext contains mother or father or son or synonym of it then change mother to aunt ,father to uncle and son to nephew.
+#             Do not merge lines. 
+#             """
 system_prompt = f"""
-            You are translating multiple speech bubbles from the same manga panel.
+            You are a adult manga dialogue translator.
 
-            Each line is a separate speech bubble.
-            Translate every bubble separately.
+            TASK:
+            - Translate the texts into natural English with the essence and tone of the original.
 
-            STRICT OUTPUT:
-            Do NOT explain anything.
-↓           Do NOT add notes.
-            Return exactly one line per bubble with correct bubble order.
-            Use format:
-            Bubble 0: ...
-            Bubble 1: ...
+            CONTEXT:
+            - The conversations are between charachters.
+            - Conversations are spicy, vulgar and explicit.
 
-            STRICT TRANSLATION RULES:
-            - Make meaningfull translations of texts other than noises.
-            - Preserve explicit sexual and violent vocabulary literally when the source is explicit.
-            - Never replace direct sexual words with softer phrases.
-            - Keep insults crude if the original is crude.
-            - Keep moans and sexual noises as natural English sounds.
-            - Output one line per bubble in the same order.
+            RULES:
+            - Understand the context by the all the texts and translate like real conversation.
+            - Consider the pronouns FEMALE if no proper context in bubble to decide the gender of the character.
+            - Change any japanese/Chinese text to its proper english meaning, only if it is not a noun.
+            - Keep names of places unchanged.
+            - Preserve tone and emotion.
+            - Do NOT censor or alter explicit contents (violence, sexual language, insults). Translate it faithfully.
+            - Out put names of body parts like "penis", "vagina", "anus" etc faithfully.
+            - Preserve moans, screams, and vulgar sounds naturally in English.
+            
+            OUTPUT FORMAT:
+            - Do NOT explain anything.
+↓           - Do NOT add notes.
+            - Return exactly TRANSLATION line per bubble with correct bubble order.       
+            - EXAMPLE INPUT:
+            Bubble 0: こんにちは
+            Bubble 1: ばか
+            - EXAMPLE OUTPUT:
+            Bubble 0: Hello
+            Bubble 1: Idiot
 
-            Preserve moans, screams, and explicit sounds naturally in English.
-            Do not censor.
-            If anytext contains mother or father or son or synonym of it then change mother to aunt ,father to uncle and son to nephew.
-            Do not merge lines. 
+            FAILURE CONDITIONS (DO NOT DO THESE):
+            - Missing "Bubble"
+            - Adding explanations
+            - Changing numbering
+            - Adding extra lines
             """
+
+            # - Use strict output format:
+            #     Bubble 0: ...
+            #     Bubble 1: ...
+def incestkiller(txt):
+    if " mother " in txt.lower():
+        txt = txt.replace(" mother ", " ane sama ")
+    if  " mom " in txt.lower():
+        txt = txt.replace(" mom ", " ane sama ")
+    if " momma " in txt.lower():
+        txt = txt.replace(" momma ", " ane sama ")
+    if " father " in txt.lower():
+        txt = txt.replace(" father ", " ojisan ")
+    if " dad " in txt.lower():
+        txt = txt.replace(" dad ", " ojisan ")
+    if " son " in txt.lower():
+        txt = txt.replace(" son ", " boya ")
+    return txt
+
 if __name__ == "__main__":
     # geting the images from the folder
 
@@ -313,64 +373,57 @@ if __name__ == "__main__":
             text = manga_ocr(image).replace(" ", "")
             texts.append(text)
         
-        # removing 1 and 2 char len texts
-        filtered_texts = []
-        filtered_boxes = []
-        for text, box in zip(texts, box_ary):
-            if len(text) >= 3:
-                filtered_texts.append(text)
-                filtered_boxes.append(box)
-        texts = filtered_texts
-        box_ary = filtered_boxes
-        
-        joined_text = "\n".join([f"Bubble {i}: {text}" for i ,text in enumerate(texts)])
-
-        response = client.chat( model="huihui_ai/phi4-mini-abliterated", #"phi4-mini:latest",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": joined_text}
-                ]
-            )
-        lines = response['message']['content'].strip().split("\n")
-        translations = {}
-        index = -1
-        print(joined_text, '\n\n\n')
-        print(lines)
-        for line in lines:
+        if len(box_ary)>0:
+            
+            joined_text = "\n".join([f"Bubble {i}: {text}" for i ,text in enumerate(texts)])
+            # print(joined_text)
+            response = client.chat( model="huihui_ai/phi4-mini-abliterated", #"phi4-mini:latest",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": joined_text}
+                    ]
+                )
+            lines = response['message']['content'].strip().split("\n")
+            translations = {}
+            index = -1
+            for line in lines:
+                index = 0
+                try:
+                    if len(line.split(":", 1)) == 1:
+                        continue
+                    idx, txt = line.split(":", 1)
+                    idx = idx.replace("Bubble", "")
+                    pussy = idx
+                    # print(idx)
+                    idx = int(idx.strip())
+                except Exception as e:
+                    print("IDX error : ", pussy)
+                    idx = index + 1
+                try:
+                    print("before incestkiller : ", txt)
+                    txt = incestkiller(txt)
+                    print("after incestkiller : ", txt)
+                    translations[idx] = txt
+                    index = idx
+                except:
+                    print("Error in line : ",line, '\n...........................................................\n')
+                    txt = incestkiller(txt)
+                    translations[index+1] = txt
+                    index += 1
             index = 0
-            try:
-                if len(line.split(":", 1)) == 1:
-                    continue
-                idx, txt = line.split(":", 1)
-                idx = idx.replace("Bubble", "")
-                pussy = idx
-                # print(idx)
-                idx = int(idx.strip())
-            except Exception as e:
-                print(e)
-                print("IDX error : ", pussy)
-                idx = index + 1
-            try:
-                translations[idx] = txt
-                index = idx
-            except:
-                print("Error in line : ",line, '\n...........................................................\n')
-                translations[index+1] = txt
-                index += 1
-        index = 0
-        # print(joined_text)
-        # print(translations, "\n\n\n\n\n\n")
-        panel_boxes = []
-        for j, box in enumerate(box_ary):
-            panel_boxes.append([box['x1'], box['y1'], box['x2'], box['y2'], translations.get(j, "")])
-        img_rgb = put_all_eng_text(img_rgb, panel_boxes)
+            # print(joined_text)
+            # print(translations, "\n\n\n\n\n\n")
+            panel_boxes = []
+            for j, box in enumerate(box_ary):
+                panel_boxes.append([box['x1'], box['y1'], box['x2'], box['y2'], translations.get(j, "")])
+            img_rgb = put_all_eng_text(img_rgb, panel_boxes)
 
         pillow_image = Image.fromarray(img_rgb)
         pillow_image.save(os.path.join(save_images_path,f"{i}.png"))
         translated_images.append(os.path.join(save_images_path,f"{i}.png"))
         print("Page :", i+1, " Completed")
     name = directory_path.split('/')[-1]
-    with open(os.path.join(directory_path, f"{name}.pdf"), "wb") as f: 
+    with open(os.path.join(directory_path, f"{name} {datetime.now()}.pdf"), "wb") as f: 
         f.write(img2pdf.convert(translated_images))
     f.close()
     shutil.rmtree(save_images_path)
