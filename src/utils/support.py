@@ -3,6 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 from datetime import datetime
 import shutil
+import re
 
 class Textworker:
     def __init__(self):
@@ -112,6 +113,14 @@ class Textworker:
         
         return pil_img
     
+    def incestkiller(self, txt):
+        txt = re.sub(r"\bmother\b", "ane sama", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bmom\b", "ane sama", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bmomma\b", "ane sama", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bfather\b", "ojisan", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bdad\b", "ojisan", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bson\b", "boya", txt, flags=re.IGNORECASE)
+        return txt
     def translations(self, lines):
         translations = {}
         index = -1
@@ -129,10 +138,12 @@ class Textworker:
                 print("IDX error : ", er)
                 idx = index + 1
             try:
+                txt = self.incestkiller(txt)
                 translations[idx] = txt
                 index = idx
             except:
                 print("Error in line : ",line, '\n...........................................................\n')
+                txt = self.incestkiller(txt)
                 translations[index+1] = txt
                 index += 1
             

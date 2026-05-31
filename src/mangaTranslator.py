@@ -6,10 +6,10 @@ from utils.utilOllama import Utilollama
 from utils.support import Textworker
 from utils.custom_prompt import Prompts
 from tqdm import tqdm
-import shutil
+from pathlib import Path
 
 if __name__ == "__main__":
-    directory_path = r"/home/zumbie/Downloads/HENTAI/[Hasebe Souutsu] Izayoi Sakuya to Higyaku Shounentachi Soushuuhen"
+    directory_path = r"/home/zumbie/Downloads/HENTAI/nhentai-322419 - [Tsuzura Kuzukago] AV Joyuu no Kaa-san to Hikikomori no Boku ga Sex Suru You ni Natta Wake [Digital]"
     
     boxDetect = BoxDetect()
     custom_prompts = Prompts()
@@ -17,13 +17,13 @@ if __name__ == "__main__":
     textWorker = Textworker()
 
     images = os.listdir(directory_path)
+    images = sorted(images, key=lambda x: int(Path(x).stem))
     print("Total Images: ",len(images))
-    print(images)
-    images=sorted(images)
+    # images=sorted(images)
     print(images)
     # translated_images = []
     for image_path, i in tqdm(zip(images, range(len(images)))):
-        if image_path.endswith(".pdf" or ".txt"):
+        if image_path.endswith(".pdf" or ".txt" or ".json"):
             continue
         box_ary, img_rgb = boxDetect.get_boxes(os.path.join(directory_path, image_path))
         # Optimizations starts here
