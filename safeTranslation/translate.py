@@ -15,12 +15,10 @@ import img2pdf
 from tqdm import tqdm
 import shutil
 from datetime import datetime
+from pdf2image import convert_from_path
 
-# directory_path = "/home/zumbie/Downloads/HENTAI/(成年コミック) [ジョン・K・ペー太] マン・コンプリート [DL版]"
-# directory_path = "/home/zumbie/Downloads/HENTAI/(C106) [STUDIO VANGUARD (TWILIGHT)] V250817 [Chinese]"
-directory_path = r"/home/zumbie/Downloads/HENTAI/僕がお母さんとこんな事になっちゃう話 10 温泉編"
-# directory_path = "/home/zumbie/Downloads/HENTAI/testfuck"
-
+directory_path = r"/home/zumbie/Documents/IPPO"
+pdf_path = r"/home/zumbie/Documents/IPPO/001 [JP] Hajime no Ippo.pdf"
 
 def wrap_text_pixel(draw, text, font, max_width):
     words = text.split()
@@ -140,7 +138,7 @@ def get_system_prompt(text):
     - Preserve insults, explicit wording and noises.
     - Understand the context by the all the texts and translate like real conversation.
     - Keep the same numbering and DO NOT MISS ANY BUBBLE.
-    - Preserve moans, screams, and vulgar sounds naturally in English.
+    - Preserve screams and sounds naturally in English.
     - Output ONLY translated lines and do not add any explanations.
     - Do not add extra bubbles.
 
@@ -159,76 +157,52 @@ def get_system_prompt(text):
         """
     return prompt
 
-    system_prompt = f"""
-                You are a adult manga dialogue translator.
+system_prompt = f"""
+            You are a manga dialogue translator.
 
-                TASK:
-                - Translate the texts into natural English with the essence and tone of the original.
+            TASK:
+            - Translate the texts into natural English with the essence and tone of the original.
 
-                CONTEXT:
-                - The conversations are between charachters.
-                - Conversations are spicy, vulgar and explicit.
+            CONTEXT:
+            - The conversations are between charachters.
 
-                RULES:
-                - Understand the context by the all the texts and translate like real conversation.
-                - Consider the pronouns FEMALE if no proper context in bubble to decide the gender of the character.
-                - Change any japanese/Chinese text to its proper english meaning, only if it is not a noun.
-                - Keep names of places unchanged.
-                - Preserve tone and emotion.
-                - Do NOT censor or alter explicit contents (violence, sexual language, insults). Translate it faithfully.
-                - Out put names of body parts like "penis", "vagina", "anus" etc faithfully.
-                - Preserve moans, screams, and vulgar sounds naturally in English.
-                
-                OUTPUT FORMAT:
-                - Do NOT explain anything.
-    ↓           - Do NOT add notes.
-                - Return exactly TRANSLATION line per bubble with correct bubble order.       
-                - EXAMPLE INPUT:
-                Bubble 0: こんにちは
-                Bubble 1: ばか
-                - EXAMPLE OUTPUT:
-                Bubble 0: Hello
-                Bubble 1: Idiot
+            RULES:
+            - Understand the context by the all the texts and translate like real conversation.
+            - Change any japanese/Chinese text to its proper english meaning, only if it is not a noun.
+            - Keep names of places unchanged.
+            - Preserve tone and emotion.
+            - Do NOT censor or alter explicit contents (violence, sexual language, insults). Translate it faithfully.
+            - Preserve screams and sounds naturally in English.
+            
+            OUTPUT FORMAT:
+            - Do NOT explain anything.
+↓           - Do NOT add notes.
+            - Return exactly TRANSLATION line per bubble with correct bubble order.       
+            - EXAMPLE INPUT:
+            Bubble 0: こんにちは
+            Bubble 1: ばか
+            - EXAMPLE OUTPUT:
+            Bubble 0: Hello
+            Bubble 1: Idiot
 
-                FAILURE CONDITIONS (DO NOT DO THESE):
-                - Missing "Bubble"
-                - Adding explanations
-                - Changing numbering
-                - Adding extra lines
+            FAILURE CONDITIONS (DO NOT DO THESE):
+            - Missing "Bubble"
+            - Adding explanations
+            - Changing numbering
+            - Adding extra lines
 
-                Below is the text to translate:
-                {text}
-                """
-    return system_prompt    
-            # - Use strict output format:
-            #     Bubble 0: ...
-            #     Bubble 1: ...
-def incestkiller(txt):
-    txt = re.sub(r"\bmother\b", "ane sama", txt, flags=re.IGNORECASE)
-    txt = re.sub(r"\bmom\b", "ane sama", txt, flags=re.IGNORECASE)
-    txt = re.sub(r"\bmomma\b", "ane sama", txt, flags=re.IGNORECASE)
-    txt = re.sub(r"\bfather\b", "ojisan", txt, flags=re.IGNORECASE)
-    txt = re.sub(r"\bdad\b", "ojisan", txt, flags=re.IGNORECASE)
-    txt = re.sub(r"\bson\b", "boya", txt, flags=re.IGNORECASE)
-    return txt
-    if " mother " in txt.lower():
-        txt = txt.replace(" mother ", " ane sama ")
-    if  " mom " in txt.lower():
-        txt = txt.replace(" mom ", " ane sama ")
-    if " momma " in txt.lower():
-        txt = txt.replace(" momma ", " ane sama ")
-    if " father " in txt.lower():
-        txt = txt.replace(" father ", " ojisan ")
-    if " dad " in txt.lower():
-        txt = txt.replace(" dad ", " ojisan ")
-    if " son " in txt.lower():
-        txt = txt.replace(" son ", " boya ")
-    return txt
+            """
+# return system_prompt    
+        # - Use strict output format:
+        #     Bubble 0: ...
+        #     Bubble 1: ...
+
 
 if __name__ == "__main__":
     # geting the images from the folder
 
     FONT_PATH = r"../fonts/CC Wild Words Roman.ttf"
+    print("Loading model")
 
     client =ollama.Client(host="http://127.0.0.1:11434")
     manga_ocr = MangaOcr()
@@ -249,17 +223,21 @@ if __name__ == "__main__":
     # images = os.listdir(directory_path)
     # for i in images:
     #     os.rename(os.path.join(directory_path, i), os.path.join(directory_path, i.replace("pg", "")))
-    images = os.listdir(directory_path)
-    images=sorted(images)
-    translated_images = []
-    for image_path, i in tqdm(zip(images, range(len(images)))):
-        if image_path.endswith(".pdf" or ".txt"):
-            continue
+    # images = os.listdir(directory_path)
+    images = convert_from_path(pdf_path)
+    print(len(images))
+    print("Still running")
+    # images=sorted(images)
+    # translated_images = []
+    for imagy, i in tqdm(zip(images, range(len(images)))):
+        # if image_path.endswith(".pdf" or ".txt"):
+        #     continue
 
-        img_path = os.path.join(directory_path, image_path)
+        # img_path = os.path.join(directory_path, image_path)
 
-        img_bgr = cv2.imread(img_path)
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        # img_bgr = cv2.imread(img_path)
+        # img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        img_rgb = np.array(imagy)
 
         img_tensor = T.ToTensor()(img_rgb).to(device)
 
@@ -297,28 +275,28 @@ if __name__ == "__main__":
             
             joined_text = "\n".join([f"Bubble {i}: {text}" for i ,text in enumerate(texts)])
             # print(joined_text)
-            # response = client.chat( model="huihui_ai/phi4-mini-abliterated", #"phi4-mini:latest",
-            #         messages=[
-            #             {"role": "system", "content": system_prompt},
-            #             {"role": "user", "content": joined_text}
-            #         ]
-            #     )
+            response = client.chat( model="huihui_ai/phi4-mini-abliterated", #"phi4-mini:latest",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": joined_text}
+                    ]
+                )
             print("this is joined text : ",joined_text)
-            system_prompt = get_system_prompt(joined_text)
-            response  = client.generate(
-                model='huihui_ai/phi4-mini-abliterated',
-                prompt= system_prompt,
-                options={
-                    "temperature":0.0,
-                    "top_p": 0.9,
-                    "num_predict": 256,
-                    "repeat_penalty": 1.2,
-                    "stop": [f"Bubble {len(texts)}:"],
-                    }
-            )
-            print("this is response : ",response["response"])
-            lines = response['response'].strip().split("\n")
-            # lines = response['message']['content'].strip().split("\n")
+            # system_prompt = get_system_prompt(joined_text)
+            # response  = client.generate(
+            #     model='huihui_ai/phi4-mini-abliterated',
+            #     prompt= system_prompt,
+            #     options={
+            #         "temperature":0.0,
+            #         "top_p": 0.9,
+            #         "num_predict": 256,
+            #         "repeat_penalty": 1.2,
+            #         "stop": [f"Bubble {len(texts)}:"],
+            #         }
+            # )
+            # print("this is response : ",response["response"])
+            # lines = response['response'].strip().split("\n")
+            lines = response['message']['content'].strip().split("\n")
 
             translations = {}
             index = -1
@@ -329,21 +307,17 @@ if __name__ == "__main__":
                         continue
                     idx, txt = line.split(":", 1)
                     idx = idx.replace("Bubble", "")
-                    pussy = idx
+                    er = idx
                     # print(idx)
                     idx = int(idx.strip())
                 except Exception as e:
-                    print("IDX error : ", pussy)
+                    print("IDX error : ", er)
                     idx = index + 1
                 try:
-                    # print("before incestkiller : ", txt)
-                    txt = incestkiller(txt)
-                    # print("after incestkiller : ", txt)
                     translations[idx] = txt
                     index = idx
                 except:
                     print("Error in line : ",line, '\n...........................................................\n')
-                    txt = incestkiller(txt)
                     translations[index+1] = txt
                     index += 1
             index = 0
@@ -356,10 +330,27 @@ if __name__ == "__main__":
 
         pillow_image = Image.fromarray(img_rgb)
         pillow_image.save(os.path.join(save_images_path,f"{i}.png"))
-        translated_images.append(os.path.join(save_images_path,f"{i}.png"))
+        # translated_images.append(os.path.join(save_images_path,f"{i}.png"))
         print("Page :", i+1, " Completed")
-    name = directory_path.split('/')[-1]
-    with open(os.path.join(directory_path, f"{name} {datetime.now()}.pdf"), "wb") as f: 
-        f.write(img2pdf.convert(translated_images))
-    f.close()
+    name = pdf_path.split('/')[-1]
+
+    # Get image files sorted numerically
+    image_files = sorted(
+        [f for f in os.listdir(save_images_path) if f.endswith(".png")],
+        key=lambda x: int(os.path.splitext(x)[0])
+    )
+
+    # Open images
+    images = [Image.open(os.path.join(save_images_path, f)).convert("RGB") for f in image_files]
+
+
+    # Save as PDF
+    output_pdf = os.path.join(directory_path, f"{name} {datetime.now()}.pdf")
+
+    if images:
+        images[0].save(
+            output_pdf,
+            save_all=True,
+            append_images=images[1:]
+        )
     shutil.rmtree(save_images_path)
