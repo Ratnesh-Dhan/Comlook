@@ -18,9 +18,12 @@ class Utilollama:
         return response['message']['content'].strip().split("\n")
     
     def ollama_generate(self, texts):
-        system_prompt = self.prompts.get_system_prompt(self.joined_text(texts))
+        # system_prompt = self.prompts.get_system_prompt(self.joined_text(texts))
+        system_prompt = self.prompts.get_improved_prompt(self.joined_text(texts))
+        print("THIS IS JOINT TEXT : ",self.joined_text(texts))
         response  = self.client.generate(
-            model='huihui_ai/phi4-mini-abliterated',
+            # model='huihui_ai/phi4-mini-abliterated',
+            model='richardyoung/qwen2.5-7b-instruct-abliterated',
             prompt= system_prompt,
             options={
                 "temperature":0.0,

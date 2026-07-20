@@ -38,6 +38,38 @@ class Prompts:
                 - Adding extra lines
                 """
         
+    def get_improved_prompt(self, text):
+        prompt = f"""
+        You are a literal translation engine.
+
+        Translate Japanese text to natural English with the essence and tone of the original.
+
+        Rules:
+        - Do not add any extra line or any kind of explanation. only give Bubble (number): "meaning".
+        - Strictly Follow the example output format with proper 'Bubble (number)' and without extra white spaces.
+        - Never miss any bubble. Translate all of them in the same order.
+        - Preserve insults, explicit wording and noises.
+        - Understand the context by the all the texts and translate like real conversation.
+        - Keep the same numbering and DO NOT MISS ANY BUBBLE.
+        - Preserve moans, screams, and vulgar sounds naturally in English.
+        - Output ONLY translated lines and do not add any explanations.
+        - Do not add extra bubbles.
+
+
+        EXAMPLE INPUT:
+            Bubble 0: こんにちは
+            Bubble 1: ばか
+        EXAMPLE OUTPUT:
+            Bubble 0: Hello
+            Bubble 1: Idiot
+
+        Input:
+        {text}
+
+        Output:
+            """
+        return prompt
+    
     def get_system_prompt(self, text):
 
         prompt = f"""

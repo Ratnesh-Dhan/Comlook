@@ -18,7 +18,7 @@ from datetime import datetime
 
 # directory_path = "/home/zumbie/Downloads/HENTAI/(成年コミック) [ジョン・K・ペー太] マン・コンプリート [DL版]"
 # directory_path = "/home/zumbie/Downloads/HENTAI/(C106) [STUDIO VANGUARD (TWILIGHT)] V250817 [Chinese]"
-directory_path = r"/home/zumbie/Downloads/HENTAI/僕がお母さんとこんな事になっちゃう話 10 温泉編"
+directory_path = r"/home/zumbie/Downloads/HENTAI/nhentai-665588 - [ma_shika (A_shika)] Tenshi Hirotta kara Haramaseru ~Ojii-san Senyou Botebara Onaho ni Naru made no"
 # directory_path = "/home/zumbie/Downloads/HENTAI/testfuck"
 
 
@@ -135,6 +135,7 @@ def get_system_prompt(text):
     Translate Japanese text to natural English with the essence and tone of the original.
 
     Rules:
+    - Do not add any extra line or any kind of explanation. only give Bubble (number): "meaning".
     - Strictly Follow the example output format with proper 'Bubble (number)' and without extra white spaces.
     - Never miss any bubble. Translate all of them in the same order.
     - Preserve insults, explicit wording and noises.
@@ -306,7 +307,8 @@ if __name__ == "__main__":
             print("this is joined text : ",joined_text)
             system_prompt = get_system_prompt(joined_text)
             response  = client.generate(
-                model='huihui_ai/phi4-mini-abliterated',
+                # model='huihui_ai/phi4-mini-abliterated',
+                model="richardyoung/qwen2.5-7b-instruct-abliterated",
                 prompt= system_prompt,
                 options={
                     "temperature":0.0,

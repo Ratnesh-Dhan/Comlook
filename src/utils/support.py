@@ -136,6 +136,7 @@ class Textworker:
                 idx = int(idx.strip())
             except Exception as e:
                 print("IDX error : ", er)
+                print(txt)
                 idx = index + 1
             try:
                 txt = self.incestkiller(txt)
@@ -147,6 +148,7 @@ class Textworker:
                 translations[index+1] = txt
                 index += 1
             
+        print("TRANSLATIONS : ",translations)
         return translations
     
     def get_completed_image(self, box_ary, img_rgb, translations, i):
