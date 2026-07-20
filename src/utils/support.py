@@ -62,9 +62,53 @@ class Textworker:
         if current: lines.append(current)
         return lines
 
+    def fix_horizontal_overlap(self, panel_boxes, gap=1, vertical_threshold=0.3):
+        """
+        Shift horizontally-overlapping boxes so they have `gap` pixels between them.
+        Preserves each box's width and height.
+
+        panel_boxes: [(x1, y1, x2, y2, text), ...]
+        """
+
+        boxes = [list(b) for b in panel_boxes]
+
+        # Left-to-right
+        boxes.sort(key=lambda b: b[0])
+
+        for i in range(len(boxes)):
+            x1, y1, x2, y2, _ = boxes[i]
+
+            for j in range(i + 1, len(boxes)):
+                nx1, ny1, nx2, ny2, _ = boxes[j]
+
+                # ----- vertical overlap -----
+                overlap_h = min(y2, ny2) - max(y1, ny1)
+                if overlap_h <= 0:
+                    continue
+
+                min_height = min(y2 - y1, ny2 - ny1)
+
+                # Not really on the same row
+                if overlap_h < min_height * vertical_threshold:
+                    continue
+
+                # ----- horizontal overlap -----
+                if nx1 < x2 + gap:
+                    width = nx2 - nx1
+
+                    nx1 = x2 + gap
+                    nx2 = nx1 + width
+
+                    boxes[j][0] = nx1
+                    boxes[j][2] = nx2
+
+        return [tuple(b) for b in boxes]
+    
     def put_all_eng_text(self, image, panel_boxes):
         line_spacing = 1.4
         # Quick NumPy white-out
+        
+        panel_boxes = self.fix_horizontal_overlap(panel_boxes)
         for x1, y1, x2, y2, _ in panel_boxes:
             image[y1:y2, x1:x2] = 255  
             # image[y1+5:y2-5, x1+5:x2-5] = 255 
@@ -148,7 +192,6 @@ class Textworker:
                 translations[index+1] = txt
                 index += 1
             
-        print("TRANSLATIONS : ",translations)
         return translations
     
     def get_completed_image(self, box_ary, img_rgb, translations, i):
