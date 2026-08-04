@@ -1,4 +1,4 @@
-import os
+import os, sys
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 from utils.boxDetect import BoxDetect
@@ -11,7 +11,13 @@ from pathlib import Path
 if __name__ == "__main__":
     # directory_path = r"/home/zumbie/Downloads/HENTAI/nhentai-322419 - [Tsuzura Kuzukago] AV Joyuu no Kaa-san to Hikikomori no Boku ga Sex Suru You ni Natta Wake [Digital]"
     basepath = r'/home/zumbie/Downloads/HENTAI/'
-    hentai_folder = r'nhentai-634977 - [Yokohama Junky (Makari Tohru)] Kugutsu ni Ochita Akajishi no Onna Senshi (Elden Ring) [Digital]';
+    # hentai_folder = r'nhentai-656603 - [Ka Y Souken] Nikubenki Collection';
+    if len(sys.argv) > 1: 
+        hentai_folder = sys.argv[1]
+        print(f"Received folder name = {hentai_folder}")
+    else:
+        print("Put hentai directory name here")
+        sys.exit(0)
     directory_path = os.path.join(basepath, hentai_folder);
     print(directory_path)
     boxDetect = BoxDetect()

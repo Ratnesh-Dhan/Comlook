@@ -130,11 +130,88 @@ class Textworker:
             bbox = draw.textbbox((0, 0), ch, font=font)
             x += bbox[2] - bbox[0]
 
+    # def put_all_eng_text(self, image, panel_boxes):
+    #     line_spacing = 1.4
+
+    #     panel_boxes = self.fix_horizontal_overlap(panel_boxes)
+
+    #     for x1, y1, x2, y2, _ in panel_boxes:
+    #         image[y1:y2, x1:x2] = 255
+
+    #     pil_img = Image.fromarray(image)
+    #     draw = ImageDraw.Draw(pil_img)
+
+    #     for x1, y1, x2, y2, text in panel_boxes:
+
+    #         padding = 8
+    #         w, h = (x2 - x1) - padding, (y2 - y1) - padding + 8
+
+    #         low, high = 14, 22
+
+    #         final_wild_font = None
+    #         final_symbol_font = None
+    #         final_lines = []
+    #         final_total_h = 0
+
+    #         while low <= high:
+
+    #             mid = (low + high) // 2
+
+    #             wild_font = ImageFont.truetype(self.FONT_PATH, mid)
+    #             symbol_font = ImageFont.truetype(self.SYBOLS_FONT_PATH, mid)
+
+    #             lines = self.wrap_text_pixel(draw, text, wild_font, w)
+
+    #             line_metrics = draw.textbbox((0, 0), "Ay", font=wild_font)
+    #             line_h = (line_metrics[3] - line_metrics[1]) * line_spacing
+    #             total_h = line_h * len(lines)
+
+    #             if total_h <= h:
+    #                 final_wild_font = wild_font
+    #                 final_symbol_font = symbol_font
+    #                 final_lines = lines
+    #                 final_total_h = total_h
+    #                 low = mid + 1
+    #             else:
+    #                 high = mid - 1
+
+    #         if final_wild_font:
+
+    #             line_metrics = draw.textbbox((0, 0), "Ay", font=final_wild_font)
+    #             line_h = (line_metrics[3] - line_metrics[1]) * line_spacing
+
+    #             start_y = y1 + ((y2 - y1) - final_total_h) // 2
+
+    #             for line in final_lines:
+
+    #                 l_w = self.get_line_width(
+    #                     draw,
+    #                     line,
+    #                     final_wild_font,
+    #                     final_symbol_font
+    #                 )
+
+    #                 start_x = x1 + ((x2 - x1) - l_w) // 2
+
+    #                 self.draw_text_with_fallback(
+    #                     draw,
+    #                     (start_x, start_y),
+    #                     line,
+    #                     final_wild_font,
+    #                     final_symbol_font,
+    #                     fill=0
+    #                 )
+
+    #                 start_y += line_h
+
+    #     return pil_img
+
     def put_all_eng_text(self, image, panel_boxes):
         line_spacing = 1.4
 
         panel_boxes = self.fix_horizontal_overlap(panel_boxes)
 
+        # White-out original Japanese text
         for x1, y1, x2, y2, _ in panel_boxes:
             image[y1:y2, x1:x2] = 255
 
@@ -143,121 +220,171 @@ class Textworker:
 
         for x1, y1, x2, y2, text in panel_boxes:
 
-            padding = 8
-            w, h = (x2 - x1) - padding, (y2 - y1) - padding + 8
+            # Skip genuinely empty translations
+            if not text or not text.strip():
+                print("WARNING: Empty translation:", text)
+                continue
 
-            low, high = 14, 22
+            padding = 8
+
+            box_width = x2 - x1
+            box_height = y2 - y1
+
+            w = max(1, box_width - padding)
+            h = max(1, box_height - padding)
+
+            # IMPORTANT:
+            # English can be much longer than Japanese.
+            # Allow smaller fonts.
+            low = 6
+            high = 22
 
             final_wild_font = None
             final_symbol_font = None
             final_lines = []
             final_total_h = 0
+            final_line_h = 0
 
             while low <= high:
 
                 mid = (low + high) // 2
 
-                wild_font = ImageFont.truetype(self.FONT_PATH, mid)
-                symbol_font = ImageFont.truetype(self.SYBOLS_FONT_PATH, mid)
+                wild_font = ImageFont.truetype(
+                    self.FONT_PATH,
+                    mid
+                )
 
-                lines = self.wrap_text_pixel(draw, text, wild_font, w)
+                symbol_font = ImageFont.truetype(
+                    self.SYBOLS_FONT_PATH,
+                    mid
+                )
 
-                line_metrics = draw.textbbox((0, 0), "Ay", font=wild_font)
-                line_h = (line_metrics[3] - line_metrics[1]) * line_spacing
+                lines = self.wrap_text_pixel(
+                    draw,
+                    text,
+                    wild_font,
+                    w
+                )
+
+                line_metrics = draw.textbbox(
+                    (0, 0),
+                    "Ay",
+                    font=wild_font
+                )
+
+                line_h = (
+                    line_metrics[3] - line_metrics[1]
+                ) * line_spacing
+
                 total_h = line_h * len(lines)
 
                 if total_h <= h:
+
                     final_wild_font = wild_font
                     final_symbol_font = symbol_font
                     final_lines = lines
                     final_total_h = total_h
+                    final_line_h = line_h
+
+                    # Try bigger font
                     low = mid + 1
+
                 else:
+                    # Font too large
                     high = mid - 1
 
-            if final_wild_font:
+            # -------------------------------------------------
+            # FALLBACK
+            # -------------------------------------------------
+            # Even 6px didn't fit.
+            # We STILL draw it instead of leaving a blank box.
+            # -------------------------------------------------
 
-                line_metrics = draw.textbbox((0, 0), "Ay", font=final_wild_font)
-                line_h = (line_metrics[3] - line_metrics[1]) * line_spacing
+            if final_wild_font is None:
 
-                start_y = y1 + ((y2 - y1) - final_total_h) // 2
+                fallback_size = 6
 
-                for line in final_lines:
+                final_wild_font = ImageFont.truetype(
+                    self.FONT_PATH,
+                    fallback_size
+                )
 
-                    l_w = self.get_line_width(
-                        draw,
-                        line,
-                        final_wild_font,
-                        final_symbol_font
-                    )
+                final_symbol_font = ImageFont.truetype(
+                    self.SYBOLS_FONT_PATH,
+                    fallback_size
+                )
 
-                    start_x = x1 + ((x2 - x1) - l_w) // 2
+                final_lines = self.wrap_text_pixel(
+                    draw,
+                    text,
+                    final_wild_font,
+                    w
+                )
 
-                    self.draw_text_with_fallback(
-                        draw,
-                        (start_x, start_y),
-                        line,
-                        final_wild_font,
-                        final_symbol_font,
-                        fill=0
-                    )
+                line_metrics = draw.textbbox(
+                    (0, 0),
+                    "Ay",
+                    font=final_wild_font
+                )
 
-                    start_y += line_h
+                final_line_h = (
+                    line_metrics[3] - line_metrics[1]
+                ) * line_spacing
+
+                final_total_h = (
+                    final_line_h * len(final_lines)
+                )
+
+                print(
+                    "WARNING: Text still too large for bubble:",
+                    repr(text),
+                    "box:",
+                    (box_width, box_height)
+                )
+
+            # -------------------------------------------------
+            # Vertical centering
+            # -------------------------------------------------
+
+            start_y = y1 + (
+                (box_height - final_total_h) // 2
+            )
+
+            # Don't allow text to start above the box
+            start_y = max(y1, start_y)
+
+            # -------------------------------------------------
+            # Draw every line
+            # -------------------------------------------------
+
+            for line in final_lines:
+
+                l_w = self.get_line_width(
+                    draw,
+                    line,
+                    final_wild_font,
+                    final_symbol_font
+                )
+
+                start_x = x1 + (
+                    (box_width - l_w) // 2
+                )
+
+                # Don't allow negative positioning
+                start_x = max(x1, start_x)
+
+                self.draw_text_with_fallback(
+                    draw,
+                    (start_x, start_y),
+                    line,
+                    final_wild_font,
+                    final_symbol_font,
+                    fill=0
+                )
+
+                start_y += final_line_h
 
         return pil_img
-    # def put_all_eng_text(self, image, panel_boxes):
-    #     line_spacing = 1.4
-    #     # Quick NumPy white-out
-        
-    #     panel_boxes = self.fix_horizontal_overlap(panel_boxes)
-    #     for x1, y1, x2, y2, _ in panel_boxes:
-    #         image[y1:y2, x1:x2] = 255  
-    #         # image[y1+5:y2-5, x1+5:x2-5] = 255 
-
-            
-    #     pil_img = Image.fromarray(image)
-    #     draw = ImageDraw.Draw(pil_img)
-
-    #     for x1, y1, x2, y2, text in panel_boxes:
-    #         # Use a slightly larger padding (e.g., 15) to ensure text doesn't touch edges
-    #         padding = 8
-    #         w, h = (x2 - x1) - padding, (y2 - y1) - padding+8
-            
-    #         low, high = 14, 22#30
-    #         final_font, final_lines, final_total_h = None, [], 0
-    #         while low <= high:
-    #             mid = (low + high) // 2
-    #             f = ImageFont.truetype(self.FONT_PATH, mid)
-    #             f2 = ImageFont.truetype(self.SYBOLS_FONT_PATH, mid)
-    #             lines = self.wrap_text_pixel(draw, text, f, w)
-    #             line_metrics = draw.textbbox((0, 0), "Ay", font=f)
-    #             line_h = (line_metrics[3] - line_metrics[1])*line_spacing   #1.2
-    #             total_h = line_h * len(lines)
-                
-    #             if total_h <= h:
-    #                 final_font, final_lines, final_total_h = f, lines, total_h
-    #                 low = mid + 1
-    #             else:
-    #                 high = mid - 1
-            
-    #         if final_font:
-    #             line_metrics = draw.textbbox((0, 0), "Ay", font=final_font)
-    #             line_h = (line_metrics[3] - line_metrics[1])*line_spacing
-                
-    #             # Start Y: Center the block vertically
-    #             start_y = y1 + ( (y2 - y1) - final_total_h ) // 2
-                
-    #             for line in final_lines:
-    #                 l_bbox = draw.textbbox((0, 0), line, font=final_font)
-    #                 l_w = l_bbox[2] - l_bbox[0] # Correct width
-                    
-    #                 # Start X: Center this specific line horizontally
-    #                 start_x = x1 + ( (x2 - x1) - l_w ) // 2
-                    
-    #                 draw.text((start_x, start_y), line, fill=0, font=final_font)
-    #                 start_y += line_h
-        
-    #     return pil_img
     
     def incestkiller(self, txt):
         txt = re.sub(r"\bmother\b", "ane sama", txt, flags=re.IGNORECASE)
