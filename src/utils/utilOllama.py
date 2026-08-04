@@ -26,9 +26,9 @@ class Utilollama:
             model='richardyoung/qwen2.5-7b-instruct-abliterated',
             prompt= system_prompt,
             options={
-                "temperature":0.0,
+                "temperature":0.35,
                 "top_p": 0.9,
-                "num_predict": 256,
+                "num_predict": 512,
                 "repeat_penalty": 1.2,
                 "stop": [f"Bubble {len(texts)}:"],
                 }

@@ -10,8 +10,8 @@ from pathlib import Path
 
 if __name__ == "__main__":
     # directory_path = r"/home/zumbie/Downloads/HENTAI/nhentai-322419 - [Tsuzura Kuzukago] AV Joyuu no Kaa-san to Hikikomori no Boku ga Sex Suru You ni Natta Wake [Digital]"
-    basepath = r'/home/zumbie/Downloads/HENTAI/new/'
-    hentai_folder = r'nhentai-606703 - [Ka Y Souken] Majogari Gohoushi Dorei Hen';
+    basepath = r'/home/zumbie/Downloads/HENTAI/'
+    hentai_folder = r'nhentai-211608 - (C91) [BooBooKid (PIP)] Elma Taisa to Irina Chuui ni Iroiro Shite Mita. (Xenoblade Chronicles X)';
     directory_path = os.path.join(basepath, hentai_folder);
     print(directory_path)
     boxDetect = BoxDetect()
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     textWorker = Textworker()
 
     images = os.listdir(directory_path)
+    images = [i for i in images if not i.endswith(".pdf" or ".txt" or ".json")]
     images = sorted(images, key=lambda x: int(Path(x).stem))
     print("Total Images: ",len(images))
     # images=sorted(images)
