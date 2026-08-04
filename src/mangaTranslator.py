@@ -11,7 +11,7 @@ from pathlib import Path
 if __name__ == "__main__":
     # directory_path = r"/home/zumbie/Downloads/HENTAI/nhentai-322419 - [Tsuzura Kuzukago] AV Joyuu no Kaa-san to Hikikomori no Boku ga Sex Suru You ni Natta Wake [Digital]"
     basepath = r'/home/zumbie/Downloads/HENTAI/'
-    hentai_folder = r'nhentai-211608 - (C91) [BooBooKid (PIP)] Elma Taisa to Irina Chuui ni Iroiro Shite Mita. (Xenoblade Chronicles X)';
+    hentai_folder = r'nhentai-634977 - [Yokohama Junky (Makari Tohru)] Kugutsu ni Ochita Akajishi no Onna Senshi (Elden Ring) [Digital]';
     directory_path = os.path.join(basepath, hentai_folder);
     print(directory_path)
     boxDetect = BoxDetect()
@@ -19,16 +19,14 @@ if __name__ == "__main__":
     olama = Utilollama(custom_prompts)
     textWorker = Textworker()
 
-    images = os.listdir(directory_path)
-    images = [i for i in images if not i.endswith(".pdf" or ".txt" or ".json")]
+    all_images = os.listdir(directory_path)
+    images = [i for i in all_images if not i.endswith((".pdf", ".txt", ".json"))]
     images = sorted(images, key=lambda x: int(Path(x).stem))
     print("Total Images: ",len(images))
     # images=sorted(images)
     print(images)
     # translated_images = []
     for image_path, i in tqdm(zip(images, range(len(images)))):
-        if image_path.endswith(".pdf" or ".txt" or ".json"):
-            continue
         box_ary, img_rgb = boxDetect.get_boxes(os.path.join(directory_path, image_path))
         # Optimizations starts here
         texts = boxDetect.get_texts(box_ary=box_ary)

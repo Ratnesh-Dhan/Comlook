@@ -4,10 +4,12 @@ import os
 from datetime import datetime
 import shutil
 import re
+import unicodedata
 
 class Textworker:
     def __init__(self):
         self.FONT_PATH = r"../fonts/CC Wild Words Roman.ttf"
+        self.SYBOLS_FONT_PATH = r"../fonts/DejaVuSans.ttf"
         self.save_images_path = "MangaTranslatedImages"
         os.makedirs(self.save_images_path, exist_ok=True)
 
@@ -103,59 +105,159 @@ class Textworker:
                     boxes[j][2] = nx2
 
         return [tuple(b) for b in boxes]
-    
+
+    def is_symbol(self, ch):
+        return unicodedata.category(ch).startswith("S") or ch in "♥♡❤♪♫★☆"
+
+    def get_line_width(self, draw, text, wild_font, symbol_font):
+        width = 0
+
+        for ch in text:
+            font = symbol_font if self.is_symbol(ch) else wild_font
+            bbox = draw.textbbox((0, 0), ch, font=font)
+            width += bbox[2] - bbox[0]
+
+        return width
+
+    def draw_text_with_fallback(self, draw, pos, text, wild_font, symbol_font, fill=0):
+        x, y = pos
+
+        for ch in text:
+            font = symbol_font if self.is_symbol(ch) else wild_font
+
+            draw.text((x, y), ch, fill=fill, font=font)
+
+            bbox = draw.textbbox((0, 0), ch, font=font)
+            x += bbox[2] - bbox[0]
+
     def put_all_eng_text(self, image, panel_boxes):
         line_spacing = 1.4
-        # Quick NumPy white-out
-        
-        panel_boxes = self.fix_horizontal_overlap(panel_boxes)
-        for x1, y1, x2, y2, _ in panel_boxes:
-            image[y1:y2, x1:x2] = 255  
-            # image[y1+5:y2-5, x1+5:x2-5] = 255 
 
-            
+        panel_boxes = self.fix_horizontal_overlap(panel_boxes)
+
+        for x1, y1, x2, y2, _ in panel_boxes:
+            image[y1:y2, x1:x2] = 255
+
         pil_img = Image.fromarray(image)
         draw = ImageDraw.Draw(pil_img)
 
         for x1, y1, x2, y2, text in panel_boxes:
-            # Use a slightly larger padding (e.g., 15) to ensure text doesn't touch edges
+
             padding = 8
-            w, h = (x2 - x1) - padding, (y2 - y1) - padding+8
-            
-            low, high = 14, 22#30
-            final_font, final_lines, final_total_h = None, [], 0
+            w, h = (x2 - x1) - padding, (y2 - y1) - padding + 8
+
+            low, high = 14, 22
+
+            final_wild_font = None
+            final_symbol_font = None
+            final_lines = []
+            final_total_h = 0
+
             while low <= high:
+
                 mid = (low + high) // 2
-                f = ImageFont.truetype(self.FONT_PATH, mid)
-                lines = self.wrap_text_pixel(draw, text, f, w)
-                line_metrics = draw.textbbox((0, 0), "Ay", font=f)
-                line_h = (line_metrics[3] - line_metrics[1])*line_spacing   #1.2
+
+                wild_font = ImageFont.truetype(self.FONT_PATH, mid)
+                symbol_font = ImageFont.truetype(self.SYBOLS_FONT_PATH, mid)
+
+                lines = self.wrap_text_pixel(draw, text, wild_font, w)
+
+                line_metrics = draw.textbbox((0, 0), "Ay", font=wild_font)
+                line_h = (line_metrics[3] - line_metrics[1]) * line_spacing
                 total_h = line_h * len(lines)
-                
+
                 if total_h <= h:
-                    final_font, final_lines, final_total_h = f, lines, total_h
+                    final_wild_font = wild_font
+                    final_symbol_font = symbol_font
+                    final_lines = lines
+                    final_total_h = total_h
                     low = mid + 1
                 else:
                     high = mid - 1
-            
-            if final_font:
-                line_metrics = draw.textbbox((0, 0), "Ay", font=final_font)
-                line_h = (line_metrics[3] - line_metrics[1])*line_spacing
-                
-                # Start Y: Center the block vertically
-                start_y = y1 + ( (y2 - y1) - final_total_h ) // 2
-                
+
+            if final_wild_font:
+
+                line_metrics = draw.textbbox((0, 0), "Ay", font=final_wild_font)
+                line_h = (line_metrics[3] - line_metrics[1]) * line_spacing
+
+                start_y = y1 + ((y2 - y1) - final_total_h) // 2
+
                 for line in final_lines:
-                    l_bbox = draw.textbbox((0, 0), line, font=final_font)
-                    l_w = l_bbox[2] - l_bbox[0] # Correct width
-                    
-                    # Start X: Center this specific line horizontally
-                    start_x = x1 + ( (x2 - x1) - l_w ) // 2
-                    
-                    draw.text((start_x, start_y), line, fill=0, font=final_font)
+
+                    l_w = self.get_line_width(
+                        draw,
+                        line,
+                        final_wild_font,
+                        final_symbol_font
+                    )
+
+                    start_x = x1 + ((x2 - x1) - l_w) // 2
+
+                    self.draw_text_with_fallback(
+                        draw,
+                        (start_x, start_y),
+                        line,
+                        final_wild_font,
+                        final_symbol_font,
+                        fill=0
+                    )
+
                     start_y += line_h
-        
+
         return pil_img
+    # def put_all_eng_text(self, image, panel_boxes):
+    #     line_spacing = 1.4
+    #     # Quick NumPy white-out
+        
+    #     panel_boxes = self.fix_horizontal_overlap(panel_boxes)
+    #     for x1, y1, x2, y2, _ in panel_boxes:
+    #         image[y1:y2, x1:x2] = 255  
+    #         # image[y1+5:y2-5, x1+5:x2-5] = 255 
+
+            
+    #     pil_img = Image.fromarray(image)
+    #     draw = ImageDraw.Draw(pil_img)
+
+    #     for x1, y1, x2, y2, text in panel_boxes:
+    #         # Use a slightly larger padding (e.g., 15) to ensure text doesn't touch edges
+    #         padding = 8
+    #         w, h = (x2 - x1) - padding, (y2 - y1) - padding+8
+            
+    #         low, high = 14, 22#30
+    #         final_font, final_lines, final_total_h = None, [], 0
+    #         while low <= high:
+    #             mid = (low + high) // 2
+    #             f = ImageFont.truetype(self.FONT_PATH, mid)
+    #             f2 = ImageFont.truetype(self.SYBOLS_FONT_PATH, mid)
+    #             lines = self.wrap_text_pixel(draw, text, f, w)
+    #             line_metrics = draw.textbbox((0, 0), "Ay", font=f)
+    #             line_h = (line_metrics[3] - line_metrics[1])*line_spacing   #1.2
+    #             total_h = line_h * len(lines)
+                
+    #             if total_h <= h:
+    #                 final_font, final_lines, final_total_h = f, lines, total_h
+    #                 low = mid + 1
+    #             else:
+    #                 high = mid - 1
+            
+    #         if final_font:
+    #             line_metrics = draw.textbbox((0, 0), "Ay", font=final_font)
+    #             line_h = (line_metrics[3] - line_metrics[1])*line_spacing
+                
+    #             # Start Y: Center the block vertically
+    #             start_y = y1 + ( (y2 - y1) - final_total_h ) // 2
+                
+    #             for line in final_lines:
+    #                 l_bbox = draw.textbbox((0, 0), line, font=final_font)
+    #                 l_w = l_bbox[2] - l_bbox[0] # Correct width
+                    
+    #                 # Start X: Center this specific line horizontally
+    #                 start_x = x1 + ( (x2 - x1) - l_w ) // 2
+                    
+    #                 draw.text((start_x, start_y), line, fill=0, font=final_font)
+    #                 start_y += line_h
+        
+    #     return pil_img
     
     def incestkiller(self, txt):
         txt = re.sub(r"\bmother\b", "ane sama", txt, flags=re.IGNORECASE)
@@ -164,6 +266,8 @@ class Textworker:
         txt = re.sub(r"\bfather\b", "ojisan", txt, flags=re.IGNORECASE)
         txt = re.sub(r"\bdad\b", "ojisan", txt, flags=re.IGNORECASE)
         txt = re.sub(r"\bson\b", "boya", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bclimax\b", "cum", txt, flags=re.IGNORECASE)
+        txt = re.sub(r"\bclimaxing\b", "cumming", txt, flags=re.IGNORECASE)
         return txt
     def translations(self, lines):
         translations = {}
