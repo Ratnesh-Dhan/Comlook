@@ -438,9 +438,20 @@ class Textworker:
             print(e)
             return 
     
+    def save_empty_image(self, img_rgb, i):
+        try: 
+            pillow_image = Image.fromarray(img_rgb)
+            pillow_image.save(os.path.join(self.save_images_path,f"{i}.png"))
+            return True
+        except Exception as e:
+            print("Exception during saving completed image ==%%==>")
+            print(e)
+            return
+    
     def save_final_pdf(self, directory_path):
         try:
-            name = directory_path.split('/')[-1]
+            # name = directory_path.split('/')[-1]
+            name = os.path.basename(directory_path)
 
             # Get image files sorted numerically
             image_files = sorted(

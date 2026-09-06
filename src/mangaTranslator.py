@@ -10,15 +10,13 @@ from pathlib import Path
 
 if __name__ == "__main__":
     # directory_path = r"/home/zumbie/Downloads/HENTAI/nhentai-322419 - [Tsuzura Kuzukago] AV Joyuu no Kaa-san to Hikikomori no Boku ga Sex Suru You ni Natta Wake [Digital]"
-    basepath = r'/home/zumbie/Downloads/HENTAI/'
+    basepath = r'/home/zumbie/Downloads/HENTAI/new5'
     # hentai_folder = r'nhentai-656603 - [Ka Y Souken] Nikubenki Collection';
     if len(sys.argv) > 1: 
-        hentai_folder = sys.argv[1]
-        print(f"Received folder name = {hentai_folder}")
+        directory_path = sys.argv[1]
     else:
         print("Put hentai directory name here")
         sys.exit(0)
-    directory_path = os.path.join(basepath, hentai_folder);
     print(directory_path)
     boxDetect = BoxDetect()
     custom_prompts = Prompts()
@@ -52,5 +50,12 @@ if __name__ == "__main__":
                 print("Page :", i+1, " Completed")
             else:
                 print(f"Error while saving page: {i+1}")
+        elif len(box_ary)==0:
+            scuccess_message = textWorker.save_empty_image(img_rgb, i)
+            if success_message:
+                print("Page :", i+1, " Completed")
+            else:
+                print(f"Error while saving page: {i+1}")
+        print("\n\n"+"-"*100+"\n\n")
 
     print(textWorker.save_final_pdf(directory_path))
